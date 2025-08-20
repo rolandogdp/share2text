@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">Share2Text</string>
+    <string name="notify_channel_downloads">Model downloads</string>
+    <string name="notify_channel_transcribe">Transcription</string>
+    <string name="notify_downloading">Downloading model…</string>
+    <string name="notify_transcribing">Transcribing…</string>
+    <string name="copy">Copy</string>
+    <string name="share">Share</string>
+    <string name="save">Save</string>
+</resources>

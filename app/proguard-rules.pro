@@ -1,0 +1,9 @@
+-keep class com.share2text.share.nativebridge.** { *; }
+-keep class com.share2text.share.service.** { *; }
+-keep class com.share2text.share.MainActivity { *; }
+-keep class androidx.work.impl.background.systemjob.SystemJobService { *; }
+-keep class androidx.work.impl.background.systemalarm.SystemAlarmService { *; }
+-keep class androidx.hilt.work.HiltWorkerFactory { *; }
+-dontwarn java.nio.file.*
+-dontwarn org.jetbrains.annotations.**
+-dontwarn com.squareup.okhttp3.**
