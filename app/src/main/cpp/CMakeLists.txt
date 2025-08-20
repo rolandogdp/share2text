@@ -20,13 +20,14 @@ add_library(whisper_jni SHARED
         whisper_jni.cpp
 )
 
-# If you want to force some ggml/whisper defines, do it on the existing target:
 if (TARGET whisper)
-    # Disable Apple Accelerate, OpenMP etc. as needed for Android
-    target_compile_definitions(whisper PRIVATE
-            GGML_USE_ACCELERATE=0
-            GGML_USE_OPENMP=0
-    )
+    # Make sure Accelerate is NOT considered (it's Apple-only).
+    # Important: do NOT define GGML_USE_ACCELERATE at all. If it's defined (even =0),
+    # ggml uses #if defined(GGML_USE_ACCELERATE) and will include Accelerate headers.
+    target_compile_options(whisper PRIVATE -UGGML_USE_ACCELERATE)
+
+    # Optional: explicitly turn off OpenMP for Android builds.
+    target_compile_definitions(whisper PRIVATE GGML_USE_OPENMP=0)
 endif()
 
 # Include dirs if you need headers directly
