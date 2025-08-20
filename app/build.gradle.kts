@@ -1,9 +1,9 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
-    id("org.jetbrains.kotlin.plugin.compose") // required with Kotlin 2.0
+    id("org.jetbrains.kotlin.plugin.compose")
     id("com.google.dagger.hilt.android")
-    id("kotlin-kapt")
+    id("com.google.devtools.ksp") // <-- keep here, no version
 }
 
 android {
@@ -29,6 +29,18 @@ android {
         ndk { abiFilters += listOf("arm64-v8a") }
     }
 
+    // Java 17 for Java compile
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+    // Java toolchain (ensures Javac uses JDK 17)
+    java {
+        toolchain {
+            languageVersion.set(JavaLanguageVersion.of(17))
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
@@ -45,8 +57,7 @@ android {
         buildConfig = true
     }
 
-    // Do NOT use composeOptions with Kotlin 2.0 compose plugin
-
+    // Kotlin options (still fine to keep)
     kotlinOptions {
         jvmTarget = "17"
         freeCompilerArgs += listOf("-Xjvm-default=all")
@@ -70,6 +81,15 @@ android {
     }
 }
 
+// Kotlin toolchain for Kotlin & KSP
+kotlin {
+    jvmToolchain(17)
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+        freeCompilerArgs.add("-Xjvm-default=all")
+    }
+}
+
 dependencies {
     val composeBom = platform("androidx.compose:compose-bom:2024.09.02")
     implementation(composeBom)
@@ -87,11 +107,11 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.4")
     implementation("androidx.navigation:navigation-compose:2.7.7")
 
-    // Hilt
+    // Hilt (use KSP instead of KAPT)
     implementation("com.google.dagger:hilt-android:2.51.1")
-    kapt("com.google.dagger:hilt-compiler:2.51.1")
+    ksp("com.google.dagger:hilt-compiler:2.51.1")
     implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
-    kapt("androidx.hilt:hilt-compiler:1.2.0")
+    ksp("androidx.hilt:hilt-compiler:1.2.0")
 
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
@@ -99,7 +119,7 @@ dependencies {
     // WorkManager
     implementation("androidx.work:work-runtime-ktx:2.9.1")
     implementation("androidx.hilt:hilt-work:1.2.0")
-    kapt("androidx.hilt:hilt-compiler:1.2.0")
+    // no kapt here either; AndroidX Hilt compiler on KSP above
 
     // DataStore
     implementation("androidx.datastore:datastore-preferences:1.1.1")

@@ -1,10 +1,15 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <uses-sdk android:minSdkVersion="29" android:targetSdkVersion="34" />
-
+    <!-- Foreground service (dataSync) on targetSdk 34 -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <!-- Removed: android.permission.FOREGROUND_SERVICE_MEDIA_PROCESSING -->
+
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <application
@@ -48,8 +53,8 @@
 
         <service
             android:name=".service.TranscriptionService"
-            android:foregroundServiceType="dataSync|mediaProjection|connectedDevice"
-            android:exported="false" />
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
 
         <provider
             android:name="androidx.core.content.FileProvider"
@@ -61,9 +66,5 @@
                 android:resource="@xml/file_paths" />
         </provider>
 
-        <service
-            android:name=".download.DownloadWorker"
-            android:exported="false"
-            android:permission="android.permission.BIND_JOB_SERVICE" />
     </application>
 </manifest>

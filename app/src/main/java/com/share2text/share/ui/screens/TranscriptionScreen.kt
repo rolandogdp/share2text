@@ -35,23 +35,38 @@ fun TranscriptionScreen(nav: NavHostController, vm: TranscriptionViewModel = hil
     DisposableEffect(Unit) {
         val conn = object : ServiceConnection {
             override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
-                bound = true
-                val svc = (binder as TranscriptionService.LocalBinder).service()
+                val lb = binder as? TranscriptionService.LocalBinder
+                val svc = lb?.service
+                bound = svc != null
                 service = svc
-                if (uris.isNotEmpty() && !state.started) {
+
+                if (svc != null && uris.isNotEmpty() && !state.started) {
                     val uri = uris.first()
                     vm.markStarted()
                     scope.launch {
                         val modelPath = vm.ensureActiveModelOrPrompt(nav)
                         if (modelPath != null) {
-                            svc.startTranscription(uri, modelPath, vm.language(), vm.threads()) {
-                                vm.updateLive(it.text, it.progress, it.done, it.error)
+                            svc.startTranscription(
+                                uri = uri,
+                                modelPath = modelPath,
+                                language = vm.language(),
+                                threads = vm.threads()
+                            ) { update ->
+                                vm.updateLive(
+                                    text = update.text,
+                                    progress = update.progress,
+                                    done = update.done,
+                                    error = update.error
+                                )
                             }
                         }
                     }
                 }
             }
-            override fun onServiceDisconnected(name: ComponentName?) { bound = false; service = null }
+            override fun onServiceDisconnected(name: ComponentName?) {
+                bound = false
+                service = null
+            }
         }
         val intent = Intent(ctx, TranscriptionService::class.java)
         ctx.startForegroundService(intent)
@@ -60,6 +75,7 @@ fun TranscriptionScreen(nav: NavHostController, vm: TranscriptionViewModel = hil
             if (bound) ctx.unbindService(conn)
         }
     }
+
 
     Column(Modifier.fillMaxSize().padding(16.dp)) {
         Text("Transcription", style = MaterialTheme.typography.headlineMedium)

@@ -40,9 +40,11 @@ object Modules {
     @Provides @Singleton
     fun provideWhisperBridge(@ApplicationContext ctx: Context): WhisperBridge = WhisperBridge(ctx)
 
-    @Provides @Singleton
+
+    @Provides
+    @Singleton
     fun provideTranscriptionRepository(
-        @ApplicationContext ctx: Context,
-        whisper: WhisperBridge
-    ): TranscriptionRepository = TranscriptionRepository(ctx, whisper)
+        @ApplicationContext context: Context
+    ): TranscriptionRepository = TranscriptionRepository(context)
+
 }

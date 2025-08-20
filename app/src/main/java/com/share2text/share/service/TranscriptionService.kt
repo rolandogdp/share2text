@@ -4,104 +4,111 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
-import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Binder
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
-import androidx.lifecycle.LifecycleService
 import com.share2text.share.R
 import com.share2text.share.repo.TranscriptionRepository
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @AndroidEntryPoint
-class TranscriptionService : LifecycleService() {
+class TranscriptionService : Service() {
 
     @Inject lateinit var repo: TranscriptionRepository
 
-    private val binder = LocalBinder()
-    private var job: Job? = null
-
-    data class State(
-        val text: String = "",
-        val progress: Int = 0,
-        val done: Boolean = false,
-        val error: String? = null
-    )
-
-    private val channelId = "transcribe"
-    private val notifId = 1002
-
+    // Expose the service instance via a property (not a function)
     inner class LocalBinder : Binder() {
-        fun service(): TranscriptionService = this@TranscriptionService
+        val service: TranscriptionService
+            get() = this@TranscriptionService
     }
+    private val binder = LocalBinder()
 
-    override fun onBind(intent: Intent): IBinder {
-        super.onBind(intent)
-        return binder
-    }
+    private val serviceScope = CoroutineScope(Dispatchers.Default)
+    private var currentJob: Job? = null
 
     override fun onCreate() {
         super.onCreate()
-        createChannel()
+        startForeground(NOTIF_ID, buildNotification("Idle"))
     }
 
-    private fun createChannel() {
-        val mgr = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        val ch = NotificationChannel(channelId, getString(R.string.notify_channel_transcribe),
-            NotificationManager.IMPORTANCE_LOW
-        )
-        mgr.createNotificationChannel(ch)
-    }
+    override fun onBind(intent: Intent?): IBinder = binder
 
-    fun startTranscription(uri: Uri, modelPath: String, language: String?, threads: Int, onUpdate: (State) -> Unit) {
-        val n = NotificationCompat.Builder(this, channelId)
-            .setSmallIcon(android.R.drawable.ic_btn_speak_now)
-            .setContentTitle(getString(R.string.notify_transcribing))
-            .setContentText("Preparing…")
-            .setOngoing(true)
-            .setOnlyAlertOnce(true)
-            .build()
-        startForeground(notifId, n)
+    // DTO that matches what TranscriptionScreen expects in the callback
+    data class Update(
+        val text: String,
+        val progress: Int,     // 0..100
+        val done: Boolean,
+        val error: String? = null
+    )
 
-        job?.cancel()
-        job = lifecycleScope.launch(Dispatchers.IO) {
+    /**
+     * Starts a transcription job. Replace the stub body with your real pipeline.
+     */
+    fun startTranscription(
+        uri: Uri,
+        modelPath: String,
+        language: String?,
+        threads: Int,
+        onUpdate: (Update) -> Unit
+    ) {
+        // Cancel any running job
+        currentJob?.cancel()
+
+        currentJob = serviceScope.launch {
             try {
-                var lastLen = 0
-                val collectJob = launch(Dispatchers.Main) {
-                    repo.liveText.collect { t ->
-                        val prog = if (t.length > 0) (t.length % 90) + 10 else 5
-                        onUpdate(State(text = t, progress = prog))
-                        updateNotification("Transcribing…", prog)
-                    }
+                // TODO: call into repo to ensure model ready, decode audio, and run whisper.cpp
+                onUpdate(Update(text = "", progress = 1, done = false, error = null))
+                updateNotification("Preparing…")
+
+                // --- Stubbed progress demo; replace with real progress from JNI/whisper.cpp ---
+                for (p in listOf(5, 15, 35, 60, 80, 95)) {
+                    onUpdate(Update(text = "…processing ($p%)", progress = p, done = false))
+                    updateNotification("Transcribing… $p%")
+                    kotlinx.coroutines.delay(200L)
                 }
-                val res = repo.transcribeUri(uri, modelPath, language, threads)
-                collectJob.cancel()
-                onUpdate(State(text = res.text, progress = 100, done = true))
-                updateNotification("Done", 100, done = true)
-                stopForeground(STOP_FOREGROUND_DETACH)
+
+                // Final result (stub)
+                val finalText = "Transcription placeholder"
+                onUpdate(Update(text = finalText, progress = 100, done = true, error = null))
+                updateNotification("Done")
             } catch (t: Throwable) {
-                onUpdate(State(error = t.message ?: "Error"))
-                updateNotification("Error", 0, done = true)
-                stopForeground(STOP_FOREGROUND_DETACH)
+                onUpdate(Update(text = "", progress = 0, done = true, error = t.message))
+                updateNotification("Failed")
             }
         }
     }
 
-    private fun updateNotification(text: String, progress: Int, done: Boolean = false) {
-        val n = NotificationCompat.Builder(this, channelId)
-            .setSmallIcon(android.R.drawable.ic_btn_speak_now)
-            .setContentTitle(getString(R.string.notify_transcribing))
-            .setContentText(text)
-            .setOngoing(!done)
-            .setOnlyAlertOnce(true)
-            .setProgress(100, progress, progress <= 0)
+    private fun buildNotification(content: String): Notification {
+        val channelId = "transcription"
+        val mgr = getSystemService(NotificationManager::class.java)
+        if (Build.VERSION.SDK_INT >= 26) {
+            val ch = NotificationChannel(
+                channelId, "Transcription", NotificationManager.IMPORTANCE_LOW
+            )
+            mgr?.createNotificationChannel(ch)
+        }
+        return NotificationCompat.Builder(this, channelId)
+            .setSmallIcon(R.drawable.ic_notification_dot)
+            .setOngoing(true)
+            .setContentTitle("Share2Text")
+            .setContentText(content)
             .build()
-        val mgr = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        mgr.notify(notifId, n)
+    }
+
+    private fun updateNotification(content: String) {
+        val mgr = getSystemService(NotificationManager::class.java)
+        mgr?.notify(NOTIF_ID, buildNotification(content))
+    }
+
+    companion object {
+        private const val NOTIF_ID = 42
     }
 }
