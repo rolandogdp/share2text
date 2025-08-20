@@ -1,0 +1,64 @@
+name: Build then Publish Release
+
+
+on:
+  push:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.meta.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: meta
+        run: echo "tag=${GITHUB_REF_NAME:-manual}" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/gradle-build-action@v2
+
+      - name: Assemble APKs
+        run: |
+          ./gradlew :app:assembleDebug
+          ./gradlew :app:assembleRelease
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: apks
+          path: |
+            app/build/outputs/apk/debug/*.apk
+            app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
+          
+      - name: Create/Update Release and upload assets
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.build.outputs.tag }}
+          files: dist/*.apk
+          generate_release_notes: true
+
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: apks
+          path: dist
+
+   #   - name: Create/Update Release and upload assets
+    #    uses: softprops/action-gh-release@v2
+     #   with:
+      #    tag_name: ${{ needs.build.outputs.tag }}
+       #   files: dist/*.apk
+        #  generate_release_notes: true
