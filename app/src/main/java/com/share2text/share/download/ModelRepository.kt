@@ -2,7 +2,7 @@ package com.share2text.share.download
 
 import android.app.Notification
 import android.content.Context
-import android.net.Uri
+import android.annotation.SuppressLint
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.datastore.core.DataStore
@@ -10,6 +10,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.work.*
+import androidx.lifecycle.asFlow
 import com.share2text.share.R
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -87,6 +88,17 @@ class ModelRepository(
     fun activeModelFlow(dataStore: DataStore<Preferences>): Flow<String?> =
         dataStore.data.map { it[activeKey] }
 
+    fun downloadProgressFlow(id: String): Flow<Int?> {
+        val wm = WorkManager.getInstance(context)
+        return wm.getWorkInfosForUniqueWorkLiveData("download-$id")
+            .asFlow()
+            .map { infos ->
+                val info = infos.firstOrNull() ?: return@map null
+                if (info.state.isFinished) 100
+                else info.progress.getInt("progress", -1).takeIf { it >= 0 }
+            }
+    }
+
     fun enqueueDownload(preset: ModelPreset, wifiOnly: Boolean): String {
         val req = OneTimeWorkRequestBuilder<ModelDownloadWorker>()
             .setInputData(
@@ -114,6 +126,7 @@ class ModelRepository(
     }
 }
 
+@android.annotation.SuppressLint("MissingPermission")
 class ModelDownloadWorker(
     appContext: Context,
     params: WorkerParameters

@@ -24,8 +24,22 @@ fun ModelPickerScreen(nav: NavHostController, vm: ModelViewModel = hiltViewModel
                     Column(Modifier.padding(12.dp)) {
                         Text(p.displayName)
                         Text(p.url, style = MaterialTheme.typography.bodySmall)
+                        val progress = state.progress[p.id]
+                        if (progress != null && progress < 100) {
+                            LinearProgressIndicator(
+                                progress = progress / 100f,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 8.dp)
+                            )
+                            Text("$progress%", style = MaterialTheme.typography.bodySmall)
+                        }
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Button(onClick = { vm.download(p) }) { Text("Download") }
+                            if (progress == null || progress >= 100) {
+                                Button(onClick = { vm.download(p) }) { Text("Download") }
+                            } else {
+                                OutlinedButton(onClick = {}, enabled = false) { Text("Downloading") }
+                            }
                             if (state.activeId == p.id) {
                                 AssistChip(onClick = {}, label = { Text("Active") })
                             } else {
