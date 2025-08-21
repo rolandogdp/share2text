@@ -29,15 +29,15 @@ android {
         ndk { abiFilters += listOf("arm64-v8a") }
     }
 
-    // Java 17 for Java compile
+    // Java 21 for Java compile
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
     }
-    // Java toolchain (ensures Javac uses JDK 17)
+    // Java toolchain (ensures Javac uses JDK 21)
     java {
         toolchain {
-            languageVersion.set(JavaLanguageVersion.of(17))
+            languageVersion.set(JavaLanguageVersion.of(21))
         }
     }
 
@@ -59,7 +59,7 @@ android {
 
     // Kotlin options (still fine to keep)
     kotlinOptions {
-        jvmTarget = "17"
+        jvmTarget = "21"
         freeCompilerArgs += listOf("-Xjvm-default=all")
     }
 
@@ -83,9 +83,9 @@ android {
 
 // Kotlin toolchain for Kotlin & KSP
 kotlin {
-    jvmToolchain(17)
+    jvmToolchain(21)
     compilerOptions {
-        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
         freeCompilerArgs.add("-Xjvm-default=all")
     }
 }
