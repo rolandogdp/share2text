@@ -3,6 +3,7 @@ package com.share2text.share.download
 import android.app.Notification
 import android.content.Context
 import android.net.Uri
+import android.annotation.SuppressLint
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.datastore.core.DataStore
@@ -132,6 +133,7 @@ class ModelDownloadWorker(
             .build()
     }
 
+    @SuppressLint("MissingPermission")
     override suspend fun doWork(): Result {
         val url = inputData.getString("url") ?: return Result.failure()
         val destPath = inputData.getString("dest") ?: return Result.failure()
@@ -142,6 +144,7 @@ class ModelDownloadWorker(
         dest.parentFile?.mkdirs()
 
         // Progress notify
+        @SuppressLint("MissingPermission")
         NotificationManagerCompat.from(applicationContext).notify(
             id.hashCode(), notification(0, "Starting $displayName")
         )
