@@ -19,7 +19,8 @@ class ModelViewModel @Inject constructor(
 
     data class State(
         val presets: List<ModelRepository.ModelPreset> = emptyList(),
-        val activeId: String? = null
+        val activeId: String? = null,
+        val progress: Map<String, Int> = emptyMap()
     )
 
     private val _state = MutableStateFlow(State(presets = repo.presets))
@@ -29,6 +30,15 @@ class ModelViewModel @Inject constructor(
         viewModelScope.launch {
             repo.activeModelFlow(dataStore).collect { id ->
                 _state.value = _state.value.copy(activeId = id)
+            }
+        }
+        repo.presets.forEach { p ->
+            viewModelScope.launch {
+                repo.downloadProgressFlow(p.id).collect { pct ->
+                    val map = _state.value.progress.toMutableMap()
+                    if (pct == null) map.remove(p.id) else map[p.id] = pct
+                    _state.value = _state.value.copy(progress = map)
+                }
             }
         }
     }
