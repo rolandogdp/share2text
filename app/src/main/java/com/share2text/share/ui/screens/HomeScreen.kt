@@ -7,10 +7,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
-import kotlinx.coroutines.launch
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.share2text.share.viewmodel.ModelViewModel
 
 @Composable
-fun HomeScreen(nav: NavHostController) {
+fun HomeScreen(nav: NavHostController, vm: ModelViewModel = hiltViewModel()) {
+    val state by vm.state.collectAsState()
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -19,7 +22,9 @@ fun HomeScreen(nav: NavHostController) {
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Text("Share2Text", style = MaterialTheme.typography.headlineMedium)
+        val activeName = state.presets.find { it.id == state.activeId }?.displayName
         Text("Local Whisper transcription")
+        Text("Active model: ${activeName ?: "None"}")
 
         Button(onClick = { nav.navigate("models") }, modifier = Modifier.fillMaxWidth()) {
             Text("Choose / Download Model")

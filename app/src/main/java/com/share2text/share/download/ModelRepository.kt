@@ -9,6 +9,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.lifecycle.asFlow
 import androidx.work.*
 import com.share2text.share.R
 import kotlinx.coroutines.flow.Flow
@@ -80,6 +81,8 @@ class ModelRepository(
 
     fun fileForPreset(p: ModelPreset): File = File(modelsDir, "${p.id}.bin")
 
+    fun isDownloaded(p: ModelPreset): Boolean = fileForPreset(p).exists()
+
     suspend fun setActiveModel(dataStore: DataStore<Preferences>, id: String) {
         dataStore.edit { it[activeKey] = id }
     }
@@ -111,6 +114,19 @@ class ModelRepository(
             req
         )
         return req.id.toString()
+    }
+
+    data class DownloadStatus(val state: WorkInfo.State?, val progress: Int)
+
+    fun downloadStatus(p: ModelPreset): Flow<DownloadStatus> {
+        return WorkManager.getInstance(context)
+            .getWorkInfosForUniqueWorkLiveData("download-${p.id}")
+            .asFlow()
+            .map { infos ->
+                val info = infos.firstOrNull()
+                val progress = info?.progress?.getInt("progress", -1) ?: -1
+                DownloadStatus(info?.state, progress)
+            }
     }
 }
 
